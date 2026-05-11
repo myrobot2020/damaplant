@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TP Ingest - Bare Bones</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f0f0f0; }
+        #logs { background: white; border: 1px solid #ccc; height: 400px; overflow: auto; padding: 10px; margin-top: 20px; }
+        .event { border-bottom: 1px solid #eee; padding: 5px 0; }
+        .url-input { width: 400px; padding: 5px; }
+    </style>
+</head>
+<body>
+    <h1>01ingest Station</h1>
+
+    <div>
+        <input type="text" id="urlInput" class="url-input" placeholder="Paste YouTube URL here...">
+        <button onclick="runIngest()">INGEST</button>
+    </div>
+
+    <h3>Activity Log (events.json)</h3>
+    <div id="logs">Waiting for events...</div>
+
+    <script>
+        async function runIngest() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) return alert("Enter a URL");
+
+            try {
+                const response = await fetch('/ingest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                if (response.ok) {
+                    console.log("Ingest triggered");
+                }
+            } catch (e) {
+                console.error("Fail:", e);
+            }
+        }
+
+        async function updateLogs() {
+            try {
+                const response = await fetch('/events.json');
+                const events = await response.json();
+                const logsDiv = document.getElementById('logs');
+
+                logsDiv.innerHTML = events.slice().reverse().map(e => `
+                    <div class="event">
+                        <strong>[${e.verb}]</strong> ${e.job_id} <br>
+                        <small>${new Date(e.ts).toLocaleTimeString()}</small>
+                    </div>
+                `).join('');
+            } catch (e) {
+                // Ignore poll errors
+            }
+        }
+
+        setInterval(updateLogs, 2000);
+        updateLogs();
+    </script>
+</body>
+</html>
